@@ -14,7 +14,9 @@ defmodule ExRerun.MixProject do
       deps: deps(),
       dialyzer: dialyzer(),
       docs: docs(),
-      package: package()
+      package: package(),
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod
     ]
   end
 
@@ -38,7 +40,7 @@ defmodule ExRerun.MixProject do
   defp deps do
     [
       {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.4", only: :dev, runtime: false},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false}
     ]
   end
@@ -50,10 +52,12 @@ defmodule ExRerun.MixProject do
   defp docs do
     [
       name: "ExRerun",
+      main: "getting-started",
       formatter_opts: [gfm: true],
       source_ref: @version,
       source_url: "https://github.com/dragonwasrobot/ex_rerun",
       extras: [
+        "docs/getting-started.md",
         "CHANGELOG.md"
       ]
     ]
@@ -61,13 +65,6 @@ defmodule ExRerun.MixProject do
 
   defp package do
     [
-      files: [
-        "lib/ex_rerun.ex",
-        "lib/worker.ex",
-        "mix.exs",
-        "README.md",
-        "LICENSE.md"
-      ],
       maintainers: ["Peter Urbak"],
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/dragonwasrobot/ex_rerun"}

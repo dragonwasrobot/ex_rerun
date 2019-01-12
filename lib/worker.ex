@@ -28,7 +28,12 @@ defmodule ExRerun.Worker do
 
   @spec start_link :: {:ok, pid()} | :ignore | {:error, {:already_started, pid()} | term()}
   def start_link do
-    IO.puts("ex_rerun started")
+    IO.puts("ex_rerun started with config:")
+    IO.puts("- scan_interval: #{inspect(@config[:scan_interval])}")
+    IO.puts("- silent: #{inspect(@config[:silent])}")
+    IO.puts("- elm: #{inspect(@config[:run_elm])}")
+    IO.puts("- test: #{inspect(@config[:run_test])}")
+    IO.puts("- escript: #{inspect(@config[:run_escript])}")
     Process.send_after(__MODULE__, :poll_and_reload, @config[:scan_interval])
     GenServer.start_link(__MODULE__, %{}, name: ExRerun.Worker)
   end

@@ -1,20 +1,21 @@
-# ExRerun
+# Getting Started
 
-Recompiles mix project on any change to the project src files.
+## Project Setup
 
-The initial version of this project is inspired by the - currently
-unmaintained - `remix` project by AgilionApps:
-https://github.com/AgilionApps/remix
-
-## Installation
-
-Install `ex_rerun` by adding it as a dependency to `mix.exs`.
+To use ExRerun with your projects, edit your `mix.exs` file and add it as a
+dependency.
 
 ```elixir
-def deps do
+defp deps do
   [{:ex_rerun, "~> 0.1", only: :dev}]
 end
 ```
+
+## What is ExRerun
+
+ExRerun is a package that is monitors your Elixir, and other source files, while
+you are develop your application and then reruns a set of `mix` tasks whenever a
+source file is added, deleted, or changed.
 
 ## Configuration
 
