@@ -34,14 +34,15 @@ defmodule ExRerun.Worker do
     IO.puts("- elm: #{inspect(@config[:run_elm])}")
     IO.puts("- test: #{inspect(@config[:run_test])}")
     IO.puts("- escript: #{inspect(@config[:run_escript])}")
-    Process.send_after(__MODULE__, :poll_and_reload, @config[:scan_interval])
-    GenServer.start_link(__MODULE__, %{}, name: ExRerun.Worker)
+    Process.send_after(__MODULE__, :scan_and_recompile, @config[:scan_interval])
+    GenServer.start_link(__MODULE__, nil, name: ExRerun.Worker)
   end
 
+  @type state :: nil | :calendar.datetime()
   @type file_mtime :: {Path.t(), :calendar.datetime()}
 
-  @spec handle_info(:poll_and_reload, :calendar.datetime()) :: {:noreply, term}
-  def handle_info(:poll_and_reload, old_mtime) do
+  @spec handle_info(:scan_and_recompile, state) :: {:noreply, state}
+  def handle_info(:scan_and_recompile, old_mtime) do
     all_mtimes =
       @config[:paths]
       |> Enum.map(fn path -> get_dir_mtimes(path) end)
@@ -53,7 +54,7 @@ defmodule ExRerun.Worker do
       all_mtimes
       |> List.first()
 
-    if new_mtime > old_mtime do
+    if old_mtime != nil and new_mtime > old_mtime do
       files_changed =
         all_mtimes
         |> Enum.filter(fn {_, mtime} -> mtime > old_mtime end)
@@ -65,10 +66,13 @@ defmodule ExRerun.Worker do
       rerun_tasks()
     end
 
-    Process.send_after(__MODULE__, :poll_and_reload, @config[:scan_interval])
+    Process.send_after(__MODULE__, :scan_and_recompile, @config[:scan_interval])
     {:noreply, new_mtime}
   end
 
+  @doc """
+  Returns a flatten list of `file_mtime` for all files in directory, `dir`.
+  """
   @spec get_dir_mtimes(Path.t()) :: [file_mtime]
   def get_dir_mtimes(dir) do
     case File.ls(dir) do
@@ -81,35 +85,35 @@ defmodule ExRerun.Worker do
   end
 
   @spec get_files_mtimes([Path.t()], [file_mtime], Path.t()) :: [file_mtime]
-  defp get_files_mtimes(files, acc_files_mtimes, cwd)
+  defp get_files_mtimes(filenames, acc_files_mtimes, cwd)
 
-  defp get_files_mtimes([], acc_files_mtimes, _cwd) do
-    acc_files_mtimes
-    |> Enum.filter(fn file_mtime -> file_mtime != nil end)
-  end
+  defp get_files_mtimes([], acc_files_mtimes, _cwd), do: acc_files_mtimes
 
-  defp get_files_mtimes([filename | tail], acc_files_mtimes, cwd) do
+  defp get_files_mtimes([filename | filenames], acc_files_mtimes, cwd) do
     file_path = Path.join(cwd, filename)
 
     files_mtimes =
-      case File.dir?(file_path) do
-        true ->
-          get_dir_mtimes(file_path)
+      if File.dir?(file_path) do
+        get_dir_mtimes(file_path)
+      else
+        if has_relevant_filetype?(filename) do
+          case File.stat(file_path) do
+            {:ok, file_stat} ->
+              [{file_path, file_stat.mtime}]
 
-        false ->
-          if has_relevant_filetype(filename) do
-            mtime = File.stat!(file_path).mtime
-            [{file_path, mtime}]
-          else
-            []
+            {:error, _error} ->
+              []
           end
+        else
+          []
+        end
       end
 
-    get_files_mtimes(tail, files_mtimes ++ acc_files_mtimes, cwd)
+    get_files_mtimes(filenames, files_mtimes ++ acc_files_mtimes, cwd)
   end
 
-  @spec has_relevant_filetype(Path.t()) :: boolean
-  defp has_relevant_filetype(filename) do
+  @spec has_relevant_filetype?(Path.t()) :: boolean
+  defp has_relevant_filetype?(filename) do
     @config[:file_types]
     |> Enum.any?(fn file_type -> String.ends_with?(filename, file_type) end)
   end
@@ -117,60 +121,59 @@ defmodule ExRerun.Worker do
   @spec rerun_tasks :: :ok
   def rerun_tasks do
     if @config[:silent] == true do
-      ExUnit.CaptureIO.capture_io(&compile_elixir/0)
-
-      if @config[:run_elm] == true do
-        ExUnit.CaptureIO.capture_io(&compile_elm/0)
-      end
+      ExUnit.CaptureIO.capture_io(&run_compile_elixir/0)
 
       if @config[:run_test] == true do
-        ExUnit.CaptureIO.capture_io(&test_elixir/0)
+        ExUnit.CaptureIO.capture_io(&run_test_elixir/0)
       end
 
       if @config[:run_escript] == true do
-        ExUnit.CaptureIO.capture_io(&compile_escript/0)
+        ExUnit.CaptureIO.capture_io(&run_compile_escript/0)
+      end
+
+      if @config[:run_elm] == true do
+        ExUnit.CaptureIO.capture_io(&run_compile_elm/0)
       end
     else
-      compile_elixir()
-
-      if @config[:run_elm] == true do
-        compile_elm()
-      end
+      run_compile_elixir()
 
       if @config[:run_test] == true do
-        test_elixir()
+        run_test_elixir()
       end
 
       if @config[:run_escript] == true do
-        compile_escript()
+        run_compile_escript()
+      end
+
+      if @config[:run_elm] == true do
+        run_compile_elm()
       end
     end
 
     :ok
   end
 
-  @spec compile_elm :: :ok | {:error, [String.t()]} | nil
-  defp compile_elm do
+  @spec run_compile_elixir :: :ok | {:error, [String.t()]}
+  defp run_compile_elixir do
+    Mix.Tasks.Compile.Elixir.run(["--ignore-module-conflict"])
+  end
+
+  @spec run_compile_escript :: :ok | {:error, [String.t()]}
+  defp run_compile_escript do
+    Mix.Tasks.Escript.Build.run([])
+  end
+
+  @spec run_test_elixir :: :ok | {:error, [String.t()]}
+  defp run_test_elixir do
+    Mix.Tasks.Test.run([])
+  end
+
+  @spec run_compile_elm :: :ok | {:error, [String.t()]} | nil
+  defp run_compile_elm do
     if Code.ensure_loaded?(Mix.Tasks.Compile.Elm) do
       Mix.Tasks.Compile.Elm.run([])
     else
       IO.puts("Config value 'elm' was set to 'true but could not find 'Mix.Tasks.Compile.Elm'")
-      nil
     end
-  end
-
-  @spec compile_elixir :: :ok | {:error, [String.t()]}
-  defp compile_elixir do
-    Mix.Tasks.Compile.Elixir.run(["--ignore-module-conflict"])
-  end
-
-  @spec compile_escript :: :ok | {:error, [String.t()]}
-  defp compile_escript do
-    Mix.Tasks.Escript.Build.run([])
-  end
-
-  @spec test_elixir :: :ok | {:error, [String.t()]}
-  defp test_elixir do
-    Mix.Tasks.Test.run([])
   end
 end
