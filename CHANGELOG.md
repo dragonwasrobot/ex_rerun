@@ -1,36 +1,21 @@
-# ExRerun
+# Changelog
 
-Recompiles mix project on any change to the project src files.
+## v0.1.0
 
-The initial version of this project is inspired by the - currently
-unmaintained - `remix` project by AgilionApps:
-https://github.com/AgilionApps/remix
+### Added
 
-## Installation
-
-Install `ex_rerun` by adding it as a dependency to `mix.exs`.
-
-```elixir
-def deps do
-  [{:ex_rerun, "~> 0.1", only: :dev}]
-end
-```
-
-## Config
-
-It is possible to configure `ex_rerun` using the following parameters:
-
-> Note: the example below shows the default values.
+- Support for monitoring Elixir and other source files and running mix tasks on
+  code modification changes using the following configuration parameters:
 
 ```elixir
 config :ex_rerun,
-  scan_interval: 1000,
+  scan_interval: 3000,
   silent: false,
-  elm: false,
+  elm: true,
   test: false,
   escript: false,
-  paths: ["lib", "priv"],
-  file_types: [".ex", ".exs", ".eex", ".json"]
+  paths: ["lib", "priv", "web"],
+  file_types: [".elm", ".ex", ".exs", ".eex", ".json"]
 ```
 
 where:

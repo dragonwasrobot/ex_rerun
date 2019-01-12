@@ -4,18 +4,17 @@ defmodule ExRerun.Worker do
   """
 
   @config [
-    paths: Application.get_env(:ex_rerun, :paths, ["lib", "priv", "web"]),
+    paths: Application.get_env(:ex_rerun, :paths, ["lib", "priv"]),
     file_types:
       Application.get_env(:ex_rerun, :file_types, [
-        ".elm",
         ".ex",
         ".exs",
         ".eex",
         ".json"
       ]),
-    scan_interval: Application.get_env(:ex_rerun, :scan_interval, 5000),
+    scan_interval: Application.get_env(:ex_rerun, :scan_interval, 4000),
     silent: Application.get_env(:ex_rerun, :silent, false),
-    run_elm: Application.get_env(:ex_rerun, :elm, true),
+    run_elm: Application.get_env(:ex_rerun, :elm, false),
     run_test: Application.get_env(:ex_rerun, :test, false),
     run_escript: Application.get_env(:ex_rerun, :escript, false)
   ]
@@ -29,7 +28,8 @@ defmodule ExRerun.Worker do
 
   @spec start_link :: {:ok, pid()} | :ignore | {:error, {:already_started, pid()} | term()}
   def start_link do
-    Process.send_after(__MODULE__, :poll_and_reload, 5000)
+    IO.puts("ex_rerun started")
+    Process.send_after(__MODULE__, :poll_and_reload, @config[:scan_interval])
     GenServer.start_link(__MODULE__, %{}, name: ExRerun.Worker)
   end
 
@@ -149,6 +149,7 @@ defmodule ExRerun.Worker do
     if Code.ensure_loaded?(Mix.Tasks.Compile.Elm) do
       Mix.Tasks.Compile.Elm.run([])
     else
+      IO.puts("Config value 'elm' was set to 'true but could not find 'Mix.Tasks.Compile.Elm'")
       nil
     end
   end
