@@ -23,7 +23,7 @@ defmodule ExRerun.Worker do
 
   @spec init([String.t()]) :: {:ok, [String.t()]}
   def init(args) do
-    {:ok, args}
+    {:ok, args, @config[:scan_interval]}
   end
 
   @spec start_link :: {:ok, pid()} | :ignore | {:error, {:already_started, pid()} | term()}
@@ -34,15 +34,14 @@ defmodule ExRerun.Worker do
     IO.puts("- elm: #{inspect(@config[:run_elm])}")
     IO.puts("- test: #{inspect(@config[:run_test])}")
     IO.puts("- escript: #{inspect(@config[:run_escript])}")
-    Process.send_after(__MODULE__, :scan_and_recompile, @config[:scan_interval])
     GenServer.start_link(__MODULE__, nil, name: ExRerun.Worker)
   end
 
   @type state :: nil | :calendar.datetime()
   @type file_mtime :: {Path.t(), :calendar.datetime()}
 
-  @spec handle_info(:scan_and_recompile, state) :: {:noreply, state}
-  def handle_info(:scan_and_recompile, old_mtime) do
+  @spec handle_info(:timeout, state) :: {:noreply, state}
+  def handle_info(:timeout, old_mtime) do
     all_mtimes =
       @config[:paths]
       |> Enum.map(fn path -> get_dir_mtimes(path) end)
@@ -66,8 +65,7 @@ defmodule ExRerun.Worker do
       rerun_tasks()
     end
 
-    Process.send_after(__MODULE__, :scan_and_recompile, @config[:scan_interval])
-    {:noreply, new_mtime}
+    {:noreply, new_mtime, @config[:scan_interval]}
   end
 
   @doc """
