@@ -14,12 +14,11 @@ defmodule ExRerun.Worker do
       ]),
     scan_interval: Application.get_env(:ex_rerun, :scan_interval, 4000),
     silent: Application.get_env(:ex_rerun, :silent, false),
-    run_elm: Application.get_env(:ex_rerun, :elm, false),
-    run_test: Application.get_env(:ex_rerun, :test, false),
-    run_escript: Application.get_env(:ex_rerun, :escript, false)
+    tasks: Application.get_env(:ex_rerun, :tasks, [:elixir])
   ]
 
   use GenServer
+  alias Mix.Tasks.{Compile, Escript, Test}
 
   @spec init([String.t()]) :: {:ok, [String.t()]}
   def init(args) do
@@ -30,10 +29,7 @@ defmodule ExRerun.Worker do
   def start_link do
     IO.puts("ex_rerun started with config:")
     IO.puts("- scan_interval: #{inspect(@config[:scan_interval])}")
-    IO.puts("- silent: #{inspect(@config[:silent])}")
-    IO.puts("- elm: #{inspect(@config[:run_elm])}")
-    IO.puts("- test: #{inspect(@config[:run_test])}")
-    IO.puts("- escript: #{inspect(@config[:run_escript])}")
+    IO.puts("- tasks: #{inspect(@config[:tasks])}")
     GenServer.start_link(__MODULE__, nil, name: ExRerun.Worker)
   end
 
@@ -118,60 +114,39 @@ defmodule ExRerun.Worker do
 
   @spec rerun_tasks :: :ok
   def rerun_tasks do
-    if @config[:silent] == true do
-      ExUnit.CaptureIO.capture_io(&run_compile_elixir/0)
+    @config[:tasks]
+    |> Enum.map(&normalize_task_name/1)
+    |> Enum.map(&check_if_silent_output/1)
+    |> Enum.each(fn task -> task.() end)
+  end
 
-      if @config[:run_test] == true do
-        ExUnit.CaptureIO.capture_io(&run_test_elixir/0)
-      end
+  @spec normalize_task_name(atom) :: term
+  def normalize_task_name(:elixir),
+    do: fn -> Compile.Elixir.run(["--ignore-module-conflict"]) end
 
-      if @config[:run_escript] == true do
-        ExUnit.CaptureIO.capture_io(&run_compile_escript/0)
-      end
+  def normalize_task_name(:escript), do: fn -> Escript.Build.run([]) end
 
-      if @config[:run_elm] == true do
-        ExUnit.CaptureIO.capture_io(&run_compile_elm/0)
-      end
-    else
-      run_compile_elixir()
+  def normalize_task_name(:test), do: fn -> Test.run([]) end
 
-      if @config[:run_test] == true do
-        run_test_elixir()
-      end
-
-      if @config[:run_escript] == true do
-        run_compile_escript()
-      end
-
-      if @config[:run_elm] == true do
-        run_compile_elm()
+  def normalize_task_name(module_name) do
+    fn ->
+      if Code.ensure_loaded?(module_name) do
+        module_name.run([])
+      else
+        IO.puts(
+          "Mix task `#{module_name}` set to be run by `ex_rerun` " <>
+            "but could not be found by `Code.ensure_loaded?`"
+        )
       end
     end
-
-    :ok
   end
 
-  @spec run_compile_elixir :: :ok | {:error, [String.t()]}
-  defp run_compile_elixir do
-    Mix.Tasks.Compile.Elixir.run(["--ignore-module-conflict"])
-  end
-
-  @spec run_compile_escript :: :ok | {:error, [String.t()]}
-  defp run_compile_escript do
-    Mix.Tasks.Escript.Build.run([])
-  end
-
-  @spec run_test_elixir :: :ok | {:error, [String.t()]}
-  defp run_test_elixir do
-    Mix.Tasks.Test.run([])
-  end
-
-  @spec run_compile_elm :: :ok | {:error, [String.t()]} | nil
-  defp run_compile_elm do
-    if Code.ensure_loaded?(Mix.Tasks.Compile.Elm) do
-      Mix.Tasks.Compile.Elm.run([])
+  @spec check_if_silent_output(term) :: term
+  defp check_if_silent_output(fun) do
+    if @config[:silent] == true do
+      ExUnit.CaptureIO.capture_io(fun)
     else
-      IO.puts("Config value 'elm' was set to 'true but could not find 'Mix.Tasks.Compile.Elm'")
+      fun
     end
   end
 end

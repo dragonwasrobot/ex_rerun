@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.2.0
+
+### Changed
+
+Changes the configuration format to the following:
+
+```elixir
+config :ex_rerun,
+  scan_interval: 4000,
+  silent: false,
+  file_types: [".ex", ".exs", ".eex", ".json"],
+  paths: ["lib", "priv"],
+  tasks: [:elixir]
+```
+
+where:
+
+- `tasks` enumerates the mix tasks to run each time a code modification
+  occurs, possible built-in values are: `:elixir`, `:test`, `:escript`,
+  where
+  + `:elixir` recompiles Elixir source code (same as `Mix.Tasks.Compile.Elixir`),
+  + `:test` reruns any mix tests in the project (same as `Mix.Tasks.Test`), and
+  + `escript` rebuilds a escript file (same as `Mix.Tasks.Escript.Build`).
+
+Furthermore, `tasks` can also include custom mix tasks. For example, the hex
+package [elm_compile](https://hex.pm/packages/elm_compile) defines the
+`Mix.Tasks.Compile.Elm` task which allows mix to also compile Elm files in a mix
+project.
+
 ## v0.1.0
 
 ### Added

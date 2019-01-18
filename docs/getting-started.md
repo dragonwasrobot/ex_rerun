@@ -27,21 +27,37 @@ It is possible to configure `ex_rerun` using the following parameters:
 config :ex_rerun,
   scan_interval: 4000,
   silent: false,
-  elm: false,
-  test: false,
-  escript: false,
+  file_types: [".ex", ".exs", ".eex", ".json"],
   paths: ["lib", "priv"],
-  file_types: [".ex", ".exs", ".eex", ".json"]
+  tasks: [:elixir]
 ```
 
 where:
 
 - `scan_interval` specifies the number of ms to wait between rerun checks,
-- `silent` toggles whether to print every time `ex_rerun` recompiles,
-- `elm` toggles whether to run the elm compilation task on recompile, requires
-  [elm_compile](https://hex.pm/packages/elm_compile) to be installed as a
-  project dependency,
-- `test` toggles whether to also run mix test after each recompilation,
-- `escript` toggles whether to run the escript compilation task on recompile,
+- `silent` toggles whether to print the output of the `tasks` registered, every
+  time `ex_rerun` runs,
+- `file_types` lists which file types that will trigger a rerun when changed,
 - `paths` lists which folders to monitor, and
-- `file_types` lists which files that will trigger a rerun when changed.
+- `tasks` enumerates the mix tasks to run each time a code modification
+  occurs, possible built-in values are: `:elixir`, `:test`, `:escript`,
+  where
+  + `:elixir` recompiles Elixir source code (same as `Mix.Tasks.Compile.Elixir`),
+  + `:test` reruns any mix tests in the project (same as `Mix.Tasks.Test`), and
+  + `escript` rebuilds a escript file (same as `Mix.Tasks.Escript.Build`).
+
+Furthermore, `tasks` can also include custom mix tasks. For example, the hex
+package [elm_compile](https://hex.pm/packages/elm_compile) defines the
+`Mix.Tasks.Compile.Elm` task which allows mix to also compile Elm files in a mix
+project. An example project config using `ex_rerun` and `elm_compile` might look
+like so:
+
+```elixir
+config :ex_rerun,
+  file_types: [".elm", ".ex", ".exs", ".eex", ".json"],
+  paths: ["lib", "priv", "web"],
+  tasks: [:elixir, Mix.Tasks.Compile.Elm]
+```
+
+Another example of a custom mix task could be to generate API documentation for
+a project based on a set of `RAML` files.
