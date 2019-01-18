@@ -20,7 +20,7 @@ defmodule ExRerun.Worker do
   use GenServer
   alias Mix.Tasks.{Compile, Escript, Test}
 
-  @spec init([String.t()]) :: {:ok, [String.t()]}
+  @spec init([String.t()]) :: {:ok, [String.t()], integer}
   def init(args) do
     {:ok, args, @config[:scan_interval]}
   end
@@ -36,7 +36,7 @@ defmodule ExRerun.Worker do
   @type state :: nil | :calendar.datetime()
   @type file_mtime :: {Path.t(), :calendar.datetime()}
 
-  @spec handle_info(:timeout, state) :: {:noreply, state}
+  @spec handle_info(:timeout, state) :: {:noreply, state, integer}
   def handle_info(:timeout, old_mtime) do
     all_mtimes =
       @config[:paths]
