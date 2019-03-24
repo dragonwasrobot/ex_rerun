@@ -12,7 +12,7 @@ Install `ex_rerun` by adding it as a dependency to `mix.exs`.
 
 ```elixir
 def deps do
-  [{:ex_rerun, "~> 0.1", only: :dev}]
+  [{:ex_rerun, "~> 0.2", only: :dev}]
 end
 ```
 
