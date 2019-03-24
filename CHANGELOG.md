@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.2.0
+## v0.2.0 [2019-03-24]
 
 ### Changed
 
@@ -29,7 +29,7 @@ package [elm_compile](https://hex.pm/packages/elm_compile) defines the
 `Mix.Tasks.Compile.Elm` task which allows mix to also compile Elm files in a mix
 project.
 
-## v0.1.0
+## v0.1.0 [2019-01-12]
 
 ### Added
 
