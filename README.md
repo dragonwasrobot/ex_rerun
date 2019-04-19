@@ -1,5 +1,9 @@
 # ExRerun
 
+### Status
+
+[![Build Status](https://travis-ci.org/dragonwasrobot/ex_rerun.svg?branch=master)](https://travis-ci.org/dragonwasrobot/ex_rerun)
+
 Recompiles mix project on any change to the project src files.
 
 The initial version of this project is inspired by the - currently
