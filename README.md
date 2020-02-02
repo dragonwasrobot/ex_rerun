@@ -16,9 +16,14 @@ Install `ex_rerun` by adding it as a dependency to `mix.exs`.
 
 ```elixir
 def deps do
-  [{:ex_rerun, "~> 0.2", only: :dev}]
+  [{:ex_rerun, "~> 0.3", only: :dev}]
 end
 ```
+
+If developing a cmd line tool or similar project that does not involve a running
+process/server, using `mix run --no-halt` or `iex -S mix` still works for
+keeping the `ex_rerun` process alive to monitor and recompile / retest your
+code.
 
 ## Configuration
 
@@ -32,6 +37,7 @@ config :ex_rerun,
   silent: false,
   file_types: [".ex", ".exs", ".eex", ".json"],
   paths: ["lib", "priv"],
+  ignore_pattern: nil,
   tasks: [:elixir]
 ```
 
@@ -41,7 +47,10 @@ where:
 - `silent` toggles whether to print the output of the `tasks` registered, every
   time `ex_rerun` runs,
 - `file_types` lists which file types that will trigger a rerun when changed,
-- `paths` lists which folders to monitor, and
+- `paths` lists which folders to monitor,
+- `ignore_pattern` specifies a regular expression, e.g. `~r{\.?#(.)}`, matching
+  files that should to be ignored even if they have a file type included in
+  `file_types`, and
 - `tasks` enumerates the mix tasks to run each time a code modification
   occurs, possible built-in values are: `:elixir`, `:test`, `:escript`,
   where

@@ -14,13 +14,18 @@ defmodule ExRerun.Worker do
       ]),
     scan_interval: Application.get_env(:ex_rerun, :scan_interval, 4000),
     silent: Application.get_env(:ex_rerun, :silent, false),
-    tasks: Application.get_env(:ex_rerun, :tasks, [:elixir])
+    tasks: Application.get_env(:ex_rerun, :tasks, [:elixir]),
+    ignore_pattern: Application.get_env(:ex_rerun, :ignore_pattern, nil)
   ]
 
   use GenServer
   alias Mix.Tasks.{Compile, Escript, Test}
 
-  @spec init([String.t()]) :: {:ok, [String.t()], integer}
+  @spec init([String.t()]) ::
+          {:ok, [String.t()]}
+          | {:ok, [String.t()], timeout() | :hibernate | {:continue, term()}}
+          | :ignore
+          | {:stop, reason :: any()}
   def init(args) do
     {:ok, args, @config[:scan_interval]}
   end
@@ -29,14 +34,21 @@ defmodule ExRerun.Worker do
   def start_link do
     IO.puts("ex_rerun started with config:")
     IO.puts("- scan_interval: #{inspect(@config[:scan_interval])}")
+    IO.puts("- silent: #{inspect(@config[:silent])}")
     IO.puts("- tasks: #{inspect(@config[:tasks])}")
-    GenServer.start_link(__MODULE__, nil, name: ExRerun.Worker)
+    IO.puts("- ignore_pattern: #{inspect(@config[:ignore_pattern])}")
+
+    init_state = nil
+    GenServer.start_link(__MODULE__, init_state, name: ExRerun.Worker)
   end
 
-  @type state :: nil | :calendar.datetime()
   @type file_mtime :: {Path.t(), :calendar.datetime()}
+  @type state :: nil | file_mtime
 
-  @spec handle_info(:timeout, state) :: {:noreply, state, integer}
+  @spec handle_info(:timeout, state) ::
+          {:noreply, state}
+          | {:noreply, state, timeout() | :hibernate | {:continue, term()}}
+          | {:stop, reason :: term(), state}
   def handle_info(:timeout, old_mtime) do
     all_mtimes =
       @config[:paths]
@@ -108,8 +120,13 @@ defmodule ExRerun.Worker do
 
   @spec has_relevant_filetype?(Path.t()) :: boolean
   defp has_relevant_filetype?(filename) do
+    ignore_pattern = @config[:ignore_pattern]
+
     @config[:file_types]
-    |> Enum.any?(fn file_type -> String.ends_with?(filename, file_type) end)
+    |> Enum.any?(fn file_type ->
+      String.ends_with?(filename, file_type) and
+        (not Regex.regex?(ignore_pattern) or not String.match?(filename, ignore_pattern))
+    end)
   end
 
   @spec rerun_tasks :: :ok
