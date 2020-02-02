@@ -59,7 +59,7 @@ like so:
 config :ex_rerun,
   file_types: [".elm", ".ex", ".exs", ".eex", ".json"],
   paths: ["lib", "priv", "web"],
-  ignore_pattern: ~r{\.?#(.)},
+  ignore_pattern: ~r{\.?#(.*)},
   tasks: [:elixir, Mix.Tasks.Compile.Elm]
 ```
 
