@@ -40,9 +40,8 @@ where:
   time `ex_rerun` runs,
 - `file_types` lists which file types that will trigger a rerun when changed,
 - `paths` lists which folders to monitor,
-- `ignore_pattern` specifies a regular expression, e.g. `~r{\.?#(.)}`, matching
-  files that should to be ignored even if they have a file type included in
-  `file_types`, and
+- `ignore_pattern` specifies a regular expression matching files that should to
+  be ignored even if they have a file type included in `file_types`, and
 - `tasks` enumerates the mix tasks to run each time a code modification
   occurs, possible built-in values are: `:elixir`, `:test`, `:escript`,
   where
