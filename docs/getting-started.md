@@ -7,7 +7,7 @@ dependency.
 
 ```elixir
 defp deps do
-  [{:ex_rerun, "~> 0.1", only: :dev}]
+  [{:ex_rerun, "~> 0.3", only: :dev}]
 end
 ```
 
@@ -29,6 +29,7 @@ config :ex_rerun,
   silent: false,
   file_types: [".ex", ".exs", ".eex", ".json"],
   paths: ["lib", "priv"],
+  ignore_pattern: nil,
   tasks: [:elixir]
 ```
 
@@ -38,7 +39,10 @@ where:
 - `silent` toggles whether to print the output of the `tasks` registered, every
   time `ex_rerun` runs,
 - `file_types` lists which file types that will trigger a rerun when changed,
-- `paths` lists which folders to monitor, and
+- `paths` lists which folders to monitor,
+- `ignore_pattern` specifies a regular expression, e.g. `~r{\.?#(.)}`, matching
+  files that should to be ignored even if they have a file type included in
+  `file_types`, and
 - `tasks` enumerates the mix tasks to run each time a code modification
   occurs, possible built-in values are: `:elixir`, `:test`, `:escript`,
   where
@@ -56,6 +60,7 @@ like so:
 config :ex_rerun,
   file_types: [".elm", ".ex", ".exs", ".eex", ".json"],
   paths: ["lib", "priv", "web"],
+  ignore_pattern: ~r{\.?#(.)},
   tasks: [:elixir, Mix.Tasks.Compile.Elm]
 ```
 
